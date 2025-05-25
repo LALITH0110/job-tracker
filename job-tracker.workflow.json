@@ -1,0 +1,924 @@
+{
+  "name": "Notion Job tracker",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 1,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "filters": {
+          "q": "jobs-noreply@linkedin.com OR indeedapply@indeed.com OR no-reply@us.greenhouse-mail.io",
+          "readStatus": "unread"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        160,
+        0
+      ],
+      "id": "bbea6797-4b41-4875-9d73-5bc970fdabfe",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Zvyt9nUbCwV8iP1v",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Extract the following fields from this e-mail body (JSON format only):\n{\n  \"company\": …,\n  \"position\": …,\n  \"stage\": …,\n  \"location\": …\n  \"link\": …\n  \"Applied\": … \n  \"Time\": …\n}\n\"stage\": should have only Applied or Offer\n\"location\" : should be only STATE names only, like Illinois, california etc\n \"Applied\": take the date and time from {{ $json.date }} (format like example May 22,2025)\nTime: is the time of the applied at (take it from {{ $json.date }}) keep it strickly in HH:MM PM/AM format\nEmail body:\n{{ $json.text }}\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [
+        900,
+        0
+      ],
+      "id": "10017196-cf5c-4258-9658-12ad85057966",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {
+          "responseFormat": "json_object"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        920,
+        160
+      ],
+      "id": "fa7d4f67-e1c5-4b1d-847e-be038cfd862f",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "U8fuCpzfIHCmo9ZU",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}",
+        "simple": false,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        400,
+        0
+      ],
+      "id": "75585573-dc73-47c8-9f99-25f8edea6b95",
+      "name": "Gmail",
+      "webhookId": "39a51269-9637-4a0b-8952-15e288440f35",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Zvyt9nUbCwV8iP1v",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "{{ NOTION_DATABASE_ID }}",
+          "mode": "url"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Stage|status",
+              "statusValue": "={{ JSON.parse($node[\"AI Agent\"].json[\"output\"]).stage }}"
+            },
+            {
+              "key": "Company|title",
+              "title": "={{ JSON.parse($node[\"AI Agent\"].json[\"output\"]).company }}"
+            },
+            {
+              "key": "Position|rich_text",
+              "textContent": "={{ JSON.parse($node[\"AI Agent\"].json[\"output\"]).position }}"
+            },
+            {
+              "key": "Location|select",
+              "selectValue": "={{ JSON.parse($node[\"AI Agent\"].json[\"output\"]).location }}"
+            },
+            {
+              "key": "Link|url",
+              "urlValue": "={{ \n  JSON.parse($node[\"AI Agent\"].json.output).link\n    .replace('/comm/jobs/view','/jobs/view')\n    .split('?')[0]\n}}\n"
+            },
+            {
+              "key": "Description|rich_text",
+              "textContent": "={{ JSON.parse($json.output).description }}"
+            },
+            {
+              "key": "Qualified|select",
+              "selectValue": "={{ JSON.parse($json.output).qualified }}"
+            },
+            {
+              "key": "Applied on|date",
+              "date": "={{\n  (d => `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}T${d.toTimeString().split(' ')[0]}`)(\n    new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))\n  )\n}}",
+              "timezone": "Asia/Kolkata"
+            },
+            {
+              "key": "Salary Expectation|number",
+              "numberValue": "={{ JSON.parse($json.output).salary }}"
+            },
+            {
+              "key": "Location Preference|select",
+              "selectValue": "={{ JSON.parse($json.output).locationType }}"
+            },
+            {
+              "key": "Job Type|select",
+              "selectValue": "={{ JSON.parse($json.output).jobType\n}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        2120,
+        0
+      ],
+      "id": "88a0ac3a-6798-479b-8aa9-dcd63511ce0c",
+      "name": "Notion",
+      "credentials": {
+        "notionApi": {
+          "id": "wJFFAB7QjemmOlpu",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ \n  // turn the raw JSON string into an object\n  JSON.parse($node[\"AI Agent\"].json.output)\n    // pull out the link, fix the path, strip query\n    .link\n    .replace(\"/comm/jobs/view\",\"/jobs/view\")\n    .split(\"?\")[0] \n}}\n\n",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        0
+      ],
+      "id": "896735bf-6858-4ac8-8a3a-1995fb9086d2",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "description",
+              "cssSelector": ".show-more-less-html__markup"
+            },
+            {
+              "key": "salary",
+              "cssSelector": ".job-details-fit-level-preferences > button:nth-of-type(1) span.tvm__text--low-emphasis strong"
+            },
+            {
+              "key": "locationType",
+              "cssSelector": ".job-details-fit-level-preferences   > button:nth-of-type(2)     span.tvm__text--low-emphasis > strong"
+            },
+            {
+              "key": "jobType",
+              "cssSelector": ".job-details-fit-level-preferences   > button:nth-of-type(3)     span.tvm__text--low-emphasis > strong"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        1540,
+        0
+      ],
+      "id": "577970a5-b363-4efa-841d-efb4f333b224",
+      "name": "HTML"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=System:\nYou are a concise summarization assistant.\n\nUser:\nHere is a long job description.  Please distill it into a 2–3 sentence summary:\n\n{{$node[\"HTML\"].json[\"description\"]}}\n\nthe output json should always have \"description\" : ...\n\"qualified\": yes or no\n\"locationType\" : either Remote or Hybrid or On-site\n\"jobType\" : \"either Internship or Full-time or Contract\n\"salary\" : take the higher number in expected and tell the value, if it is hourly basis (2-digits) then multiply the number * 2120, it should be a number, no commas or anything just number (make 60k into 60000) \n\nget the salary,location and job type from {{ $('HTTP Request').item.json.data }}\n\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [
+        1740,
+        0
+      ],
+      "id": "97352078-0507-44d7-807a-01eba047eedd",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {
+          "responseFormat": "json_object"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1760,
+        200
+      ],
+      "id": "33d9edcf-aa99-4742-b5ac-99125e581aef",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "U8fuCpzfIHCmo9ZU",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.headers.from }}",
+                    "rightValue": "From: \"Indeed Apply\" <indeedapply@indeed.com>",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "e7d507a9-3b2f-4cf9-b825-c2a2c9770ed5"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "480f5f77-aa41-462a-83be-6b629363c2e3",
+                    "leftValue": "={{ $json.headers.from }}",
+                    "rightValue": "From: LinkedIn <jobs-noreply@linkedin.com>",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "3aa730f1-caf6-48b9-ab64-3964fe47a50f",
+                    "leftValue": "={{ $json.headers.from }}",
+                    "rightValue": "From: no-reply@us.greenhouse-mail.io",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        580,
+        0
+      ],
+      "id": "f976d5ca-6aec-4731-856d-217a0b3f44df",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "dataPropertyName": "html",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "link",
+              "cssSelector": "h1 a",
+              "returnValue": "attribute",
+              "attribute": "href"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        920,
+        -320
+      ],
+      "id": "9196255a-00bf-4147-866f-ae137f892301",
+      "name": "HTML1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Extract the following fields from this e-mail body (JSON format only):\n{\n  \"company\": …,\n  \"position\": …,\n  \"stage\": Applied\n  \"location\": …\n  \"link\": get a zip recruiter job link of this otherwise just say ZipRecruiter\n  \"Applied\": … \n  \"Time\": …\n  \"qualified\": if it is related to any CS fields then yes otherwise no\n  \"description\": ask serpAI to search for web content and get description for this job\n  \"LocationPreferance\": Remote or On-Site or Hybrid if nothing mentioned then On-Site\n  \"jobType\": Internship or Full-time or contract (if nothing mentioned then Full-time)\n}\n\"stage\": should have only Applied or Offer\n\"location\" : should be only STATE names only, like Illinois, california etc\n \"Applied\": take the date and time from {{ $json.date }} (format like example May 22,2025)\nTime: is the time of the applied at (take it from {{ $json.date }}) it should be in the form of HH:MM AM/PM\nEmail body:\n{{ $json.text }}\n\n\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [
+        900,
+        300
+      ],
+      "id": "6169c2de-0569-40e9-92f7-44e18805e084",
+      "name": "AI Agent2"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        920,
+        460
+      ],
+      "id": "169ec1b7-fcf3-4091-9d0e-94fe90dcc113",
+      "name": "OpenAI Chat Model2",
+      "credentials": {
+        "openAiApi": {
+          "id": "U8fuCpzfIHCmo9ZU",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "{{ NOTION_DATABASE_ID }}",
+          "mode": "url"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Stage|status",
+              "statusValue": "Applied"
+            },
+            {
+              "key": "Company|title",
+              "title": "={{ JSON.parse(\n     $node[\"AI Agent2\"].json[\"output\"]\n       .replace(/```json\\s*/g,'')\n       .replace(/```/g,'')\n   ).company }}\n\n"
+            },
+            {
+              "key": "Position|rich_text",
+              "textContent": "={{ JSON.parse(\n     $node[\"AI Agent2\"].json[\"output\"]\n       .replace(/```json\\s*/g,'')\n       .replace(/```/g,'')\n   ).position }}"
+            },
+            {
+              "key": "Location|select",
+              "selectValue": "={{ JSON.parse(\n     $node[\"AI Agent2\"].json[\"output\"]\n       .replace(/```json\\s*/g,'')\n       .replace(/```/g,'')\n   ).location }}"
+            },
+            {
+              "key": "Link|url",
+              "urlValue": "={{ JSON.parse(\n     $node[\"AI Agent2\"].json[\"output\"]\n       .replace(/```json\\s*/g,'')\n       .replace(/```/g,'')\n   ).link }}"
+            },
+            {
+              "key": "Description|rich_text",
+              "textContent": "={{ JSON.parse(\n     $node[\"AI Agent2\"].json[\"output\"]\n       .replace(/```json\\s*/g,'')\n       .replace(/```/g,'')\n   ).description }}"
+            },
+            {
+              "key": "Qualified|select",
+              "selectValue": "={{ JSON.parse(\n     $node[\"AI Agent2\"].json[\"output\"]\n       .replace(/```json\\s*/g,'')\n       .replace(/```/g,'')\n   ).qualified }}"
+            },
+            {
+              "key": "Applied on|date",
+              "date": "={{ JSON.parse(\n     $node[\"AI Agent2\"].json[\"output\"]\n       .replace(/```json\\s*/g, '')\n       .replace(/```/g, '')\n   ).Applied }}",
+              "timezone": "={{JSON.parse(\n  $node[\"AI Agent2\"].json[\"output\"]\n    .replace(/^```.*\\n/, \"\")\n    .replace(/\\n```$/, \"\")\n).Time.trim()}}"
+            },
+            {
+              "key": "Salary Expectation|number",
+              "numberValue": "={{ 0 }}"
+            },
+            {
+              "key": "Location Preference|select",
+              "selectValue": "={{ JSON.parse(\n     $node[\"AI Agent2\"].json[\"output\"]\n       .replace(/```json\\s*/g, '')\n       .replace(/```/g, '')\n   ).LocationPreferance }}"
+            },
+            {
+              "key": "Job Type|select",
+              "selectValue": "={{ JSON.parse(\n     $node[\"AI Agent2\"].json[\"output\"]\n       .replace(/```json\\s*/g, '')\n       .replace(/```/g, '')\n   ).jobType }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        2120,
+        300
+      ],
+      "id": "4a7b68de-10c4-4a58-933a-e2d199bf0fd0",
+      "name": "Notion1",
+      "credentials": {
+        "notionApi": {
+          "id": "wJFFAB7QjemmOlpu",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Get the job listing id from the link {{ $('HTML1').item.json.link }}\n\nmake sure that the result will be  \nhttps://www.glassdoor.co.in/partner/jobListing.htm?\n  jobListingId=1009750919287\n  &ao=1136043\n  &src=GD_JOB_AD\n  &…etc…\n(format)\nafter that \n– the path (/job-listing/senior-software-engineer-kraken-…) is Glassdoor’s SEO slug for Job ID 1009750919287\n– the only query parameter you really need is jl=1009750919287 (everything else is for tracking/attribution)\n\nso the final link you should be LIKE this not THIS outout\nhttps://www.glassdoor.co.in/job-listing/senior-software-engineer-kraken-JV_IC1132348_KO0,24_KE25,31.htm?jl=1009750919287\n\nso doing the same pattern, get the url for the following application link {{ $('HTML1').item.json.link }} and this \n{{ $('Gmail').item.json.html }}\n\n\nUsing serpAPI and search from the web about the job and get\n \"description\": description of the job (if you need use this {{ $json.output }}),\n \"link\": get the linkt to apply for this job ,\n\"salary\": get salary of this job (round off) and get average salafry of this position at this job (it should only be number, no need to say per year or hours, etc)(number not string)\n\nyour output should be just\n\"description\", \"salary\" and \"link\" no extra words outside this, description should be small (2-3 lines)\n",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [
+        1760,
+        -320
+      ],
+      "id": "984ca457-31d9-40e0-b972-5975fe854c80",
+      "name": "AI Agent3"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1760,
+        -140
+      ],
+      "id": "79458518-758c-41c4-8676-b389869bae98",
+      "name": "OpenAI Chat Model3",
+      "credentials": {
+        "openAiApi": {
+          "id": "U8fuCpzfIHCmo9ZU",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "gl": "us",
+          "device": "desktop",
+          "google_domain": "google.com",
+          "hl": "en"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolSerpApi",
+      "typeVersion": 1,
+      "position": [
+        1060,
+        460
+      ],
+      "id": "880819f0-468f-46d8-aa9a-9c01c3dc6af8",
+      "name": "SerpAPI",
+      "credentials": {
+        "serpApi": {
+          "id": "nY62RMDqJNX5idbR",
+          "name": "SerpAPI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Extract the following fields from this e-mail body (just the below words, no extra words nothing else):\n  \"company\": …,\n  \"position\": …,\n  \"stage\": Applied\n  \"location\": …\n  \"link\": Glassdoor\n  \"qualified\": yes or no\n  \"Applied\": … \n  \"Time\": …\n  \"LocationType\": Remote or Hybrid or On-Site (On-Site if not specified)\n\"JobTypr: Internship or Contract or Full-time (default Full-time)\"\n\n\"stage\": should have only Applied or Offer\n\"location\" : should be only STATE names only, like Illinois, california etc\n \"Applied\": take the date and time from {{ $('Gmail').item.json.date }} (format like example May 22,2025)\nTime: is the time of the applied at (take it from {{ $('Gmail').item.json.date }}) (it should be in H:MM AM/PM format (if its 02:53 make it 2:53PM))\nEmail body:\n{{ $('Switch').item.json.html }}\nqualified if anything related cs/ai/ml or software engineering etc\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [
+        1320,
+        -320
+      ],
+      "id": "0d529901-100d-4010-b499-5fc092e3bbbf",
+      "name": "AI Agent4"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1320,
+        -160
+      ],
+      "id": "9b195a31-f488-473f-a2d4-9a7f178bfb26",
+      "name": "OpenAI Chat Model4",
+      "credentials": {
+        "openAiApi": {
+          "id": "U8fuCpzfIHCmo9ZU",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "gl": "us",
+          "device": "desktop",
+          "google_domain": "google.com",
+          "hl": "en"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolSerpApi",
+      "typeVersion": 1,
+      "position": [
+        1880,
+        -140
+      ],
+      "id": "a55622cc-1a62-4a2e-a762-24c3b4a25f50",
+      "name": "SerpAPI1",
+      "credentials": {
+        "serpApi": {
+          "id": "nY62RMDqJNX5idbR",
+          "name": "SerpAPI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "{{ NOTION_DATABASE_ID }}",
+          "mode": "url"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Stage|status",
+              "statusValue": "={{ JSON.parse(\n  $node[\"AI Agent4\"].json[\"output\"]\n    .replace(/```json\\s*/g, '')\n    .replace(/```/g, '')\n).stage }}"
+            },
+            {
+              "key": "Company|title",
+              "title": "={{ JSON.parse(\n  $node[\"AI Agent4\"].json[\"output\"]\n    .replace(/```json\\s*/g, '')\n    .replace(/```/g, '')\n).company }}\n\n"
+            },
+            {
+              "key": "Position|rich_text",
+              "textContent": "={{ JSON.parse(\n     $node[\"AI Agent4\"].json[\"output\"]\n       .replace(/```json\\s*/g,'')\n       .replace(/```/g,'')\n   ).position }}"
+            },
+            {
+              "key": "Location|select",
+              "selectValue": "={{ JSON.parse(\n     $node[\"AI Agent4\"].json[\"output\"]\n       .replace(/```json\\s*/g,'')\n       .replace(/```/g,'')\n   ).location }}"
+            },
+            {
+              "key": "Link|url",
+              "urlValue": "={{ JSON.parse(\n     $node[\"AI Agent3\"].json[\"output\"]\n       .replace(/```json\\s*/g,'')\n       .replace(/```/g,'')\n   ).link }}"
+            },
+            {
+              "key": "Description|rich_text",
+              "textContent": "={{ JSON.parse(\n     $node[\"AI Agent3\"].json[\"output\"]\n       .replace(/```json\\s*/g,'')\n       .replace(/```/g,'')\n   ).description }}"
+            },
+            {
+              "key": "Qualified|select",
+              "selectValue": "={{ JSON.parse(\n     $node[\"AI Agent4\"].json[\"output\"]\n       .replace(/```json\\s*/g,'')\n       .replace(/```/g,'')\n   ).qualified }}"
+            },
+            {
+              "key": "Applied on|date",
+              "date": "={{ JSON.parse(\n     $node[\"AI Agent4\"].json[\"output\"]\n       .replace(/```json\\s*/g, '')\n       .replace(/```/g, '')\n   ).Applied }}",
+              "timezone": "={{JSON.parse(\n  $node[\"AI Agent4\"].json[\"output\"]\n    .replace(/^```.*\\n/, \"\")\n    .replace(/\\n```$/, \"\")\n).Time.trim()}}"
+            },
+            {
+              "key": "Salary Expectation|number",
+              "numberValue": "={{ JSON.parse(\n     $node[\"AI Agent3\"].json[\"output\"]\n       .replace(/```json\\s*/g, '')\n       .replace(/```/g, '')\n   ).salary }}"
+            },
+            {
+              "key": "Location Preference|select",
+              "selectValue": "={{ JSON.parse(\n     $node[\"AI Agent4\"].json[\"output\"]\n       .replace(/```json\\s*/g, '')\n       .replace(/```/g, '')\n   ).LocationType }}"
+            },
+            {
+              "key": "Job Type|select",
+              "selectValue": "={{ JSON.parse(\n     $node[\"AI Agent4\"].json[\"output\"]\n       .replace(/```json\\s*/g, '')\n       .replace(/```/g, '')\n   ).JobTypr }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        2120,
+        -320
+      ],
+      "id": "52e6807e-1e08-4ee1-8f3f-962746572a39",
+      "name": "Notion2",
+      "credentials": {
+        "notionApi": {
+          "id": "wJFFAB7QjemmOlpu",
+          "name": "Notion account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion": {
+      "main": [
+        []
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Notion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "HTML1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent2": {
+      "main": [
+        [
+          {
+            "node": "Notion1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent3": {
+      "main": [
+        [
+          {
+            "node": "Notion2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent3",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent4": {
+      "main": [
+        [
+          {
+            "node": "AI Agent3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent4",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SerpAPI": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SerpAPI1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent3",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "95f62c89-bacc-4fa6-adfe-944b71a13b6a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "da01175a25c1a133686f27ce3049667e7079320800df927871569ed0acb50bb6"
+  },
+  "id": "JKq6NoHoGM6Lpid2",
+  "tags": []
+}
