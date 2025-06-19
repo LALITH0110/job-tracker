@@ -51,3 +51,30 @@ cd job-tracker
   * Save until no errors remain.
 * Adjust Field Mappings
   * If Notion node errors persist, verify column names in your database match the workflow mappings.
+
+## Testing the Workflow
+* Click Test Workflow in n8n.
+* Apply to a job on LinkedIn (or any supported board).
+* Wait for the workflow to process the incoming email—do not open it prematurely.
+* Observe the card animation and ensure each node executes successfully.
+* Verify a new entry in your Notion table.
+
+## Going Live
+* Activate the workflow and set the trigger interval:
+  * Default: every 1 minute
+  * For faster updates: as low as 10 seconds
+
+## Tips & Limits
+* SerpAPI Quota: 100 searches/month. If exceeded, remove the SerpAPI node—extracted data will still be captured via OpenAI parsing.
+* Custom Boards: Add extra email triggers for other job sites.
+* Additional Fields: Extend your Notion schema with tags, recruiter name, or interview notes.
+
+## Future Enhancements
+* Auto‑draft and send personalized follow‑up emails
+* Calendar integration for interview invites
+* Sentiment analysis to craft genuine follow‑ups
+* Team‑wide dashboards and analytics
+
+## Contributing
+
+Contributions welcome! Please fork the repository, create a branch for your feature/fix, and submit a pull request.
