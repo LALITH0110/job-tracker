@@ -9,4 +9,5 @@ Transform your job search with an automated, AI-driven pipeline that captures ev
 * Multi‑Board Support: Works with LinkedIn, Glassdoor, ZipRecruiter, Indeed, and more.
 * Scalable: Perfect for solo job‑seekers or high‑volume hiring teams.
 * No Copy‑Paste: Fully automated data capture via email triggers and parsing.
-![Uploading Screenshot 2025-06-20 at 12.39.27 AM.png…]()
+
+![Alt text](img/notion.png)
