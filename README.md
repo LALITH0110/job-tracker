@@ -14,3 +14,17 @@ Transform your job search with an automated, AI-driven pipeline that captures ev
   <img src="img/notion.png" width="400" />
   <img src="img/n8n.png" width="400" />
 </p>
+
+## Tech Stack
+* n8n: Workflow automation engine
+* Notion: Centralized job‑tracker database
+* OpenAI API: NLP extraction and prompt‑driven parsing
+* SerpAPI: Job metadata enrichment (100 free searches/month)
+* Gmail: Email trigger for applied‑job notifications
+
+## Prerequisites
+* A free OpenAI API key
+* A free SerpAPI key
+* A Notion account with a Job Application Tracker database (or duplicate the template)
+* An n8n account
+* Access to your job‑alert emails (LinkedIn, ZipRecruiter, Indeed, Glassdoor)
