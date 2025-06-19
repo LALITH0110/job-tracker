@@ -10,4 +10,7 @@ Transform your job search with an automated, AI-driven pipeline that captures ev
 * Scalable: Perfect for solo job‑seekers or high‑volume hiring teams.
 * No Copy‑Paste: Fully automated data capture via email triggers and parsing.
 
-![Alt text](img/notion.png)
+<p float="left">
+  <img src="img/notion.png" width="400" />
+  <img src="img/n8n.png" width="400" />
+</p>
